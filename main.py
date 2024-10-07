@@ -2,6 +2,7 @@ import os
 import sys
 import subprocess
 from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 
@@ -29,6 +30,7 @@ def duplicate_folder_with_suffix(src_folder, audio_format) -> any:
 
 def run_shell_command(xld_binary, file, new_folder, audio_format):
     command = [xld_binary, "-o", new_folder, file, "-f", audio_format]
+    # command = ["afconvert", "-d", audio_format, "-s", encode_mode, "-b", bitrate, file, new_folder]
     result = subprocess.run(command, capture_output=True, text=True)
 
     if result.returncode == 0:
@@ -48,14 +50,18 @@ if __name__ == "__main__":
     list_file: list[str] = [
         str(file) for file in Path(src_folder).iterdir() if file.is_file()
     ]
-    with ProcessPoolExecutor() as executor:
+    # with ProcessPoolExecutor() as executor:
+    #     # 各ファイルごとにrun_shell_commandを並列実行
+    #     processes = [
+    #         executor.submit(
+    #             run_shell_command, xld_binary, file, new_folder, audio_format
+    #         )
+    #         for file in list_file
+    #     ]
+    #     for process in processes:
+    #         process.result()
+    with ThreadPoolExecutor() as executor:
         # 各ファイルごとにrun_shell_commandを並列実行
-        processes = [
-            executor.submit(
-                run_shell_command, xld_binary, file, new_folder, audio_format
-            )
-            for file in list_file
-        ]
-        for process in processes:
-            process.result()
+        executor.map(lambda file: run_shell_command(xld_binary, file, new_folder, audio_format), list_file)
+
 
